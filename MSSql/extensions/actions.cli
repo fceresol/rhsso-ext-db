@@ -1,0 +1,22 @@
+## admin cli commands to edit the configuration
+embed-server --std-out=echo  --server-config=standalone-openshift.xml
+batch
+## currently deployed module is V 7.4.1, in the repo I provided both 6.2.2-jre8, 7.2.2-jre8 and 7.4.1.jre11 replace the jar name as needed
+module add --name=com.microsoft.sqlserver.jdbc --resources=./extensions/mssql-jdbc-7.4.1.jre11.jar --dependencies=javax.api,javax.resource.api,javax.transaction.api
+
+/subsystem=datasources/jdbc-driver=sqlserver:add(driver-name=sqlserver,driver-module-name=com.microsoft.sqlserver.jdbc,driver-xa-datasource-class-name=com.microsoft.sqlserver.jdbc.SQLServerXADataSource)
+
+## remove the old - embedded DS
+/subsystem=datasources/data-source=KeycloakDS:remove()
+/subsystem=datasources/data-source=KeycloakDSObjectStore:remove()
+
+## create the new datasources using the MSSQLServer drivers
+
+/subsystem=datasources/xa-data-source=KeycloakDS:add(jndi-name=java:jboss/datasources/KeycloakDS,enabled=true,use-java-context=true,driver-name=sqlserver,user-name="\$\{env.DATABASE_USERNAME\}",password="\$\{env.DATABASE_PASSWORD\}")
+/subsystem=datasources/xa-data-source=KeycloakDS/xa-datasource-properties=DatabaseName:add(value="\$\{env.DATABASE_NAME\}")
+/subsystem=datasources/xa-data-source=KeycloakDS/xa-datasource-properties=PortNumber:add(value="\$\{env.DATABASE_PORT\}")
+/subsystem=datasources/xa-data-source=KeycloakDS/xa-datasource-properties=ServerName:add(value="\$\{env.DATABASE_HOST\}")
+
+/subsystem=datasources/data-source=KeycloakDSObjectStore:add(jndi-name=java:jboss/datasources/KeycloakDSObjectStore,enabled=true,jta=false,use-java-context=true,connection-url="jdbc\:sqlserver\://\$\{env.DATABASE_HOST\}\:\$\{env.DATABASE_PORT\};DatabaseName\=\$\{env.DATABASE_NAME\}",driver-name=sqlserver,user-name="\$\{env.DATABASE_USERNAME\}",password="\$\{env.DATABASE_PASSWORD\}")
+run-batch
+quit

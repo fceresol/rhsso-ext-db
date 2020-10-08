@@ -1,0 +1,22 @@
+## admin cli commands to edit the configuration
+embed-server --std-out=echo  --server-config=standalone-openshift.xml
+batch
+## currently deployed module is V 42.2.8
+module add --name=org.postgresql.jdbc --resources=./extensions/postgresql-42.2.8.jar --dependencies=javax.api,javax.resource.api,javax.transaction.api
+
+/subsystem=datasources/jdbc-driver=postgresql:add(driver-name=postgresql,driver-module-name=org.postgresql.jdbc,driver-xa-datasource-class-name=org.postgresql.xa.PGXADataSource)
+
+## remove the old - embedded DS
+/subsystem=datasources/data-source=KeycloakDS:remove()
+/subsystem=datasources/data-source=KeycloakDSObjectStore:remove()
+
+## create the new datasources using the MSSQLServer drivers
+
+/subsystem=datasources/xa-data-source=KeycloakDS:add(jndi-name=java:jboss/datasources/KeycloakDS,enabled=true,use-java-context=true,driver-name=postgresql,user-name="\$\{env.DATABASE_USERNAME\}",password="\$\{env.DATABASE_PASSWORD\}")
+/subsystem=datasources/xa-data-source=KeycloakDS/xa-datasource-properties=DatabaseName:add(value="\$\{env.DATABASE_NAME\}")
+/subsystem=datasources/xa-data-source=KeycloakDS/xa-datasource-properties=PortNumber:add(value="\$\{env.DATABASE_PORT\}")
+/subsystem=datasources/xa-data-source=KeycloakDS/xa-datasource-properties=ServerName:add(value="\$\{env.DATABASE_HOST\}")
+
+/subsystem=datasources/data-source=KeycloakDSObjectStore:add(jndi-name=java:jboss/datasources/KeycloakDSObjectStore,enabled=true,jta=false,use-java-context=true,connection-url="jdbc\:postgresql\://\$\{env.DATABASE_HOST\}\:\$\{env.DATABASE_PORT\}/\$\{env.DATABASE_NAME\}",driver-name=postgresql,user-name="\$\{env.DATABASE_USERNAME\}",password="\$\{env.DATABASE_PASSWORD\}")
+run-batch
+quit
